@@ -1,6 +1,30 @@
+#include yoda.h
+
+/**
+ * Togglar LED 0 när man trycker på knapp 4.
+ */
+void statefull_button () {
+  int *ledInit = 0x24; // set pointer to address of DDRB
+  int *ledData = 0x25; // set pointer to address of PORTB
+  int *buttonInit = 0x21; // set pointer to address of DDRA
+  volatile int *buttonData = 0x20; // set pointer to address of PINA
+
+  *ledInit |= 0b00000001 // set data direction to output for led3
+  *buttonInit |= 0b00000000; // set data direction to input
+  
+  if((*buttonData & 0b00010000) >> 4) {
+    if(*ledData == 1) {
+      *ledData = 0;  
+    } else {
+      *ledData = 1;  
+    }
+    // Noise kanske sabbar detta.
+    while((*buttonData & 0b00010000) >> 4){}
+  }
+}
+
 void button_read_reliability() {
   /* code */
-  #include yoda.h
  
   uint8_t current_state;
   uint8_t previous_state = 0;
