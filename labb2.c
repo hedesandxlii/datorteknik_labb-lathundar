@@ -1,62 +1,117 @@
-#include yoda.h
+/*
+ * GccApplication1.c
+ *
+ * Created: 2019-02-07 15:57:41
+ * Author : an7821he-s
+ */ 
+#define F_CPU 16000000UL
 
-/**
- * Togglar LED 0 när man trycker på knapp 4.
- */
-void statefull_button () {
-  int *ledInit = 0x24; // set pointer to address of DDRB
-  int *ledData = 0x25; // set pointer to address of PORTB
-  int *buttonInit = 0x21; // set pointer to address of DDRA
-  volatile int *buttonData = 0x20; // set pointer to address of PINA
+#include <avr/io.h>
+#include "yoda.h"
+#include <util/delay.h>
 
-  *ledInit |= 0b00000001 // set data direction to output for led3
-  *buttonInit |= 0b00000000; // set data direction to input
-  
-  if((*buttonData & 0b00010000) >> 4) {
-    if(*ledData == 1) {
-      *ledData = 0;  
-    } else {
-      *ledData = 1;  
-    }
-    // Noise kanske sabbar detta.
-    while((*buttonData & 0b00010000) >> 4){}
-  }
+void statefull_button_pleb();
+void statefull_button_pro();
+void statefull_button_proest ();
+int button_read_reliability();
+void usart0_init(unsigned int ubbr);
+unsigned char usart0_receive(void);
+void usart0_transmit(unsigned char data);
+void timer3_init();
+void set_period(uint16_t);
+void set_pulse(uint16_t);
+
+int main(void)
+{
+	/* Replace with your application code */
+	timer3_init();
+	set_pulse(0xffff);
+	set_period(OCR3A);
+	while(1){
+		PORTB |= OCR3A;
+	}
 }
 
-void button_read_reliability() {
-  /* code */
- 
-  uint8_t current_state;
-  uint8_t previous_state = 0;
+void statefull_button_pleb () {
+	int *ledInit = 0x24; // set pointer to address of DDRB
+	int *ledData = 0x25; // set pointer to address of PORTB
+	int *buttonInit = 0x21; // set pointer to address of DDRA
+	volatile int *buttonData = 0x20; // set pointer to address of PINA
 
-  button_init();
-  led_init();
-
-  while (1)
-  {
-  	current_state = button_read(1);
- 	 
-  	if(current_state > previous_state)
-  	{
-
-    	led_toogle(0);  
-   	 
-  	}
-	previous_state = current_state;
-  }
- 
+	*ledInit |= 0b00000001; // set data direction to output for led3
+	*buttonInit |= 0b00000000; // set data direction to input
+	
+	while(1) {	
+		if((*buttonData & 0b00100000) >> 5) {
+			if(*ledData == 1) {
+				*ledData = 0;
+				} else {
+				*ledData = 1;
+			}
+			// Noise kanske sabbar detta. Noise sabbade det inte :)
+			while((*buttonData & 0b00100000) >> 5){}
+		}
+	}
 }
 
-void main(){
-
-  usart0_init(191);
- 
+void statefull_button_pro () {
+	DDRB |= 0b00000001; // set data direction to output for led3
+	DDRD |= 0b00000000; // set data direction to input for buttons
+	
+	while(1) {
+		if(PIND >> PORTD7) {
+			if(PORTB) {
+				PORTB = 0;
+				} else {
+				PORTB = 1;
+			}
+			while(PIND >> PORTD7){}
+		}
+	}
 }
 
-void usart0_init(unsigned int ubbr){
+void statefull_button_proest () {
+	DDRB |= 0b00000001; // set data direction to output for led3
+	DDRD |= 0b00000000; // set data direction to input for buttons
+	
+	while(1) {
+		if(button_read_reliability()) {
+			if(PORTB) {
+				PORTB = 0;
+				} else {
+				PORTB = 1;
+			}
+			while(button_read_reliability()){}
+		}
+	}
+}
+
+int button_read_reliability() {
+	/*
+		Idé: Hoppa över alla gropar och kolla värdet på första flanken och efter 50ms.
+		Vi har provat oss fram till 50ms.
+	*/
+	while (1)
+	{
+		if(PIND >> PORTD7)
+		{
+			_delay_ms(50);
+			return PIND >> PORTD7;
+		}
+	}
+}
+
+void usart_stoff() {
+	usart0_init(103);
+	while(1){
+		usart0_transmit(usart0_receive());
+	}
+}
+
+void usart0_init(unsigned int ubbr)
+{
    /*Set baud rate */
-   UBRR0H = (unsigned char)(ubrr>>8);
-   UBRR0L = (unsigned char)ubrr;
+   UBRR0 = ubbr;
    /*Enable receiver and transmitter */
    UCSR0B = (1<<RXEN0)|(1<<TXEN0);
    /* (0<<USBS0) skiftar USBS0 biten dvs stop biten till 0 dvs 1-bit stop
@@ -65,68 +120,50 @@ void usart0_init(unsigned int ubbr){
    UCSR0C = (0<<USBS0)|(3<<UCSZ00);
 }
 
-
 unsigned char usart0_receive( void )
 {
-   /* Wait for data to be received */
-   while ( !(UCSR0A & (1<<RXC)) );
-   /* Get and return received data from buffer */
-   return UDR0;
+	/* Wait for data to be received */
+	while ( !(UCSR0A & (1<<7)) ); // RXC = 7
+	/* Get and return received data from buffer */
+	return UDR0;
 }
 
 void usart0_transmit( unsigned char data )
 {
-   /* Wait for empty transmit buffer */
-   while ( !( UCSR0A & (1<<UDRE)) );
-   /* Put data into buffer, sends the data */
-   UDR0 = data;
+	/* Wait for empty transmit buffer */
+	while ( !( UCSR0A & (1<<5)) ); //UDRE = 5
+	/* Put data into buffer, sends the data */
+	UDR0 = data;
 }
 
 void timer3_init() {
-  TCCR3A = (1<<WGM30)|(0<<WGM31)|(1<<WGM32)|(0<<WGM33);
-  /*Behövs den här?*/
-  TCCR3B |= 0b0001000;
-  /*Borde funka men kanske behöver ovan rad (den kanske är smart tar det från TCCR3A) se sida 191 i manualen*/
-  TCCR3B |= 0b0000101;
+	// Clear on comparison match.
+	TCCR3A |= (1<<COM3A1) | (0<<COM3A0);
+	TCCR3A |= (1<<COM3B1) | (0<<COM3B0);
+	
+	// Fast PWM config
+	TCCR3A = (0<<WGM30)|(1<<WGM31);
+	TCCR3B |= (1<<WGM32)|(1<<WGM33);
+	/*Gammal kommentar: "Borde funka men kanske behöver ovan rad (den kanske är smart tar det från TCCR3A) se sida 191 i manualen"*/
+	TCCR3B |= (1<<CS30)|(0<<CS31)|(1<<CS32);
 
-  /*Toggles pin b6 to be an output*/
-  PORTB |= (1<<PB6);
-  DDRB |= (1<<PB6);
+	/*Toggles pin b6 to be an output*/
+	DDRB |= (1<<PORTB6);
+	//PORTB |= OCR3A;
+	//DDRB |= (1<<OCR0A);
 
-  TCCR3A |= 0b010000;
- 
+	//TCCR3A |= 0b010000;
+	
 }
 
-
-void adc_init(){
-  /*Enable ADC*/
-  ADCSRA |= (1<<ADEN);
-
-  ADCSRA |= (1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0);
-
-  /*Sätter den till 0 för att vi inte behöver ändra något?*/
-  ADMUX |= 0x00;
-
-  /*Sätter reference voltage till AVcc*/
-  ADMUX |= (0<<REFS1)|(1<<REFS0);
-}
- 
-
-
-
-/*Start conversion*/
-ADCSRA |= (1<<ADSC);
-
-/*Read conversion*/
-uint16_t adc_read(){
-  return 0x0000 | ADCL | (ADCH<<8);
+void set_pulse(uint16_t arg) {
+	OCR3AH = arg >> 8;
+	OCR3AL = arg;
 }
 
-/*Home assignment 5.1  1/340m/s 2.94 ms */
+void set_period(uint16_t ocr) {
+	ICR3H = ocr >> 8;
+	ICR3L = ocr;
+}
 
-
-/*Home assignment 5.2 varför 010*/
-TCCR1B |= (0<<CS12)|(1<<CS11)|(0<<CS10)
-
-/*Home assignment 5.3 2.27m*/
 
