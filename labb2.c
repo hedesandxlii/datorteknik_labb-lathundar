@@ -27,9 +27,6 @@ int main(void)
 	timer3_init();
 	set_pulse(0xffff);
 	set_period(OCR3A);
-	while(1){
-		PORTB |= OCR3A;
-	}
 }
 
 void statefull_button_pleb () {
