@@ -17,7 +17,8 @@ int button_read_reliability();
 void usart0_init(unsigned int ubbr);
 unsigned char usart0_receive(void);
 void usart0_transmit(unsigned char data);
-void usart_stoff();
+void usart_echo();
+void usart_led();
 void timer3_init();
 void set_period(uint16_t);
 void set_pulse(uint16_t);
@@ -29,10 +30,12 @@ void uss_stoff();
 
 int main(void)
 {
+	/* Replace with your application code */
 	//statefull_button_proest();
-	//usart_stoff();
+	//usart_echo();
+	usart_led();
 	//pwm_stoff(0xff);
-	uss_stoff();
+	//uss_stoff();
 }
 
 void statefull_button_pleb () 
@@ -102,20 +105,44 @@ int button_read_reliability()
 	{
 		if(PIND >> PORTD7)
 		{
-			_delay_ms(50);
+			_delay_ms(5);
 			return PIND >> PORTD7;
 		}
 	}
 }
 
-/**
-Allt som behövs för usart-delen.
-*/
-void usart_stoff()
+void usart_echo()
 {
 	usart0_init(103);
 	while(1){
 		usart0_transmit(usart0_receive());
+	}
+}
+
+void usart_led()
+{
+	usart0_init(103);
+	DDRB = 0xFF;
+	char tmp;
+	while(1){
+		tmp = usart0_receive();
+		switch(tmp) {
+			case '0':
+				if((PORTB & (1<<PORTB0))>>PORTB0) {
+					PORTB &= ~(1<<PORTB0);
+					} else {
+					PORTB |= 1<<PORTB0;
+				}
+				break;
+			case '1':
+				if((PORTB & (1<<PORTB1))>>PORTB1) {
+					PORTB &= ~(1<<PORTB1);
+					} else {
+					PORTB |= 1<<PORTB1;
+				}
+				break;
+			// case '2' osv...
+		}
 	}
 }
 
@@ -147,48 +174,36 @@ void usart0_transmit( unsigned char data )
 	UDR0 = data;
 }
 
-/**
-Initierar Timer3 för att göra PWM.
-*/
 void timer3_init()
 {
 	// Clear on comparison match.
 	TCCR3A |= (1<<COM3A1);
+	//TCCR3A |= (1<<COM3B1) | (0<<COM3B0);
 	
 	// Fast PWM config
 	TCCR3A |= (1<<WGM31);
 	TCCR3B |= (1<<WGM32)|(1<<WGM33);
 	
-	// Prescaler 1024
-	TCCR3B |= (1<<CS30)|(1<<CS32); 
+	TCCR3B |= (1<<CS30)|(1<<CS32); // Prescaler 1024
 
 	/*Toggles pin b6 to be an output*/
 	DDRB |= (1<<PORTB6);
 }
 
-/**
-Sätter pulsbredden för PWM. (timer3_init behöver köras först.)
-*/
 void set_pulse(uint16_t arg)
 {
 	// Enl. s.156 måste den låga byten accessas först, men i C sköter compilern det.
 	OCR3A = arg;
 }
 
-/**
-Sätter perioden för PWM. (timer3_init behöver köras först.)
-*/
 void set_period(uint16_t ocr)
 {
 	// Enl. s.156 måste den låga byten accessas först, men i C sköter compilern det.
 	ICR3 = ocr;
 }
-/**
-Denna metoden gör allt man behöver för PWM-delen i labben.
-*/ 
+
 void pwm_stoff(uint16_t period)
 {
-	
 	timer3_init();
 	set_pulse(0);
 	set_period(period);
@@ -208,35 +223,24 @@ void pwm_stoff(uint16_t period)
 	}
 }
 
-/**
-Hjälpmetod för att sätta pulsbredd och period samtidigt för PWM.
-*/
 void set_pwm(uint16_t pulse, uint16_t period)
 {
 	set_pulse(pulse);
 	set_period(period);
 }
 
-/**
-Initierar Timer1 för att användas som en stoppklocka. (Tillsammans med Ultrasonic sensor.)
-*/
 void timer1_init()
 {
-	// Rensar prescaler och stoppar därmed räknaren.
 	TCCR1B &= ~((1<<CS10)|(1<<CS11)|(1<<CS12));
 	
-	// Sätt Trigger till output och Echo till input.
+	/**/
 	DDRC |= (1<<PORTC1)|(0<<PINC0);
 }
 
-/**
-Sköter Ultrasonic sensors tidtagning. När denna har körts kan  "TCNT1" läsas för att få värdet.
-*/
 void uss_run()
 {
 	// Clears timer before measurement
 	TCNT1 = 0;
-	
 	// Creates a trigger pulse.
 	PORTC |= (1<<PORTC1);
 	_delay_us(10);
@@ -244,8 +248,7 @@ void uss_run()
 
 	// Waits for echo to go high
 	while(!(PINC & (1<<PINC0))) {}
-	// Starts counter after echo goes high by setting prescaler value to 1.
-	TCCR1B |= (1<<CS10);
+	TCCR1B |= (1<<CS10);// Starts counter after echo goes high by setting prescaler value to 1.
 	
 	// Waits for echo to go low.
 	while(PINC & (1<<PINC0)) {}
@@ -255,9 +258,6 @@ void uss_run()
 	_delay_ms(60);
 }
 
-/**
-Allt som behövs för Ultrasonic sensor-delen av labben.
-*/
 void uss_stoff() 
 {
 	timer3_init();
