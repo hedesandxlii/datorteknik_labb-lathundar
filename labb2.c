@@ -35,7 +35,7 @@ int main(void)
 	while (1)
 	{
 		uss_run();
-		set_pwm(TCNT1*255/(2^16-1), 0x00ff);
+		set_pwm(TCNT1, 0xffff);
 	}
 	
 }
