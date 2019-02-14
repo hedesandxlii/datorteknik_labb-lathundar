@@ -33,23 +33,14 @@ Vi behöver 3 8-bitars register.
 
 start:
 	jmp loop
-
-loop:
-	; Kollar om vårt värde är nått i register 3.
-	cpi third, <det värdet vi vill ha> 	; 1 cycle
+loop: 	cpi third, <det värdet vi vill ha> 	; 1 cycle
 	breq end				; 2 cycle	
-	
-	; increment:ar första registret. Om overflow, incrementera andra reg.
-	inc first	; 1
+	inc first	; 1 ; increment:ar första registret. Om overflow, incrementera andra reg.
 	brvc loop       ; 2
-	
-	; increment:ar andra registret. Om overflow, incrementera tredje reg.
-	inc second	; 1
+	inc second	; 1 ; increment:ar andra registret. Om overflow, incrementera tredje reg.
 	brvc loop	; 2
-
 	inc third	; 1
 	jmp loop	; 3
-
 end:
 	jmp end
 ```
@@ -105,3 +96,78 @@ subroutine:
 
 The difference of `0x40E0` and `0x40FF` is 32. The first element will be at address `0x40FF`, the
 second element `0x40FE`, ..., index 3 will have address `0x40FC`
+
+## 3.1
+
+Man deklarerar en sub-rutin med en vanlig *label*, man behöver även avsluta med en `ret`. Sen för
+att anropa använder man `call <subrutin>`.
+
+## 3.2
+
+*Argument* ligger i registerna och finns inte riktigt i Assembly(?). Om Assembly-kod används i ett
+C-program så ligger de skickade argumenten i `r25` till `r8`. Resultatet som returneras kommer
+ligga i registerna `r25` och `r24`. 
+
+(Om subrutinen bara returnerar ett värde av 1 byte behöver man inte rensa `r25`)
+
+## 3.3
+
+```
+0.35 µs * 16*10^6 Hz = 5,6 cykler  = 6
+0.60 µs * 16*10^6 Hz = 9,6 cykler  = 10
+0.70 µs * 16*10^6 Hz = 11,2 cykler = 11
+0.80 µs * 16*10^6 Hz = 12,8 cykler = 13
+50 µs * 16*10^6 Hz   = 800 cykler  = 800
+
+```
+
+## Skicka bits 
+
+
+```
+.global send_one
+.global send_zero
+.global send_ret
+
+#define PORTD 0x0B
+#define DDRD  0x0A
+
+; cred till "AVR Delay loop calculator"
+
+send_zero:
+	; 0.35 us high
+	; 0.80 us low
+	ldi PORTD, 0b00010000 ; sets PIN 5 to high
+	lpm		; 5 cycles, delay
+	rjmp PC+1	; 5 cycles, delay 
+	ldi PORTD, 0x00 ; sets PIN 5 to high
+	ldi r18, 4	; 13 cycles, delay
+L1:	dec r18		; 13 cycles, delay
+	brne L1		; 13 cycles, delay
+	nop		; 13 cycles, delay (kanske ska skippas.)
+
+send_one:
+	; 0.70 us high
+	; 0.60 us low
+	ldi PORTD, 0b00010000 ; sets PIN 5 to high
+	lpm		; 10 cycles, delay
+	lpm		; 10 cycles, delay
+	lpm		; 10 cycles, delay
+	nop		; 10 cycles, delay
+	ldi PORTD, 0x00 ; 11th cycle
+	lpm		; 10 cycles, delay
+	lpm		; 10 cycles, delay
+	lpm		; 10 cycles, delay
+	nop		; 10 cycles, delay
+
+
+send_ret:
+	ldi r18, 2
+	ldi r19, 9
+L2:	dec r19
+	brne L2
+	dec r18
+	brne L2
+
+	
+```
