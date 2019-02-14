@@ -1,5 +1,5 @@
-# 1.4
-* 1.1
+# 1.4 Exercises
+* 1.1, Ladda in lite värden
 ```
 start:
 	ldi r16, 3
@@ -7,7 +7,8 @@ start:
 	add r17, r16
 ```
 
-* 1.2
+* 1.2, Ålderskoll
+
 ```
 start:
 	cpi r16, 18
@@ -26,7 +27,8 @@ end:			; Infinite loop
 	rjmp end	
 ```
 
-* 1.3
+* 1.3, Stateless knapp
+
 ```
 #define PINB 0x03
 #define DDRB 0x04
@@ -40,7 +42,8 @@ end:
 	rjmp end ; infinite loop
 ```
 
-# 1.4
+* 1.4, Översätt C till Assembly
+
 ```
 ; input ligger i r20.
 ; a ligger i r24
@@ -62,7 +65,8 @@ end:			; Infinite loop
 	rjmp end	
 ```
 
-# 1.5
+* 1.5, Dan läser en crypto-kurs.
+
 ```
 ; msg 	  ligger i r16
 ; msg_end ligger i r24
