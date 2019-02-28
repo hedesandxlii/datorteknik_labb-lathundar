@@ -1,6 +1,7 @@
 # HOME ASSIGNMENTS LABB 3
 ## 1.1
 
+
 ```
 t = 0.1s
 f = 16 *10^6
