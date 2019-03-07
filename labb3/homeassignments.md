@@ -85,12 +85,13 @@ subroutine:
 	in r31, STACK_H
 	sbiw Z, N_ALLOC
 	out STACK_L, r30
-	out STACK_H, r31
+	out STACK_H, r31 ; kanelbulle did not test this though
 	;============== prologue ending
 
 	.
 	.
 	.
+	; We can also just move the stack pointer.
 ```
 
 ## 2.2
