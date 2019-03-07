@@ -18,6 +18,9 @@ void initiateIoPins()
 }
 
 int8_t getLionDelta() {
+	// input sequences for in/out.
+	char to_den[5] = {0b00,0b10,0b11,0b01,0b00};
+	char to_wild[5] = {0b00,0b01,0b11,0b10,0b00};
 	char buffer[5];
 	buffer[0] = KOLLA;	
 	for(int i = 1; i < 5;) {
@@ -26,13 +29,13 @@ int8_t getLionDelta() {
 			i++;
 		}
 	}
-	if(buffer[1] == 0b0000010 && buffer[3] == 0b0000001) { // way in to den
+	if(memcmp(to_den, buffer, sizeof(buffer)) == 0) {
 		return -1;
-	} else if(buffer[1] == 0b0000001 && buffer[3] == 0b0000010) { // way out to wildy
+	} else if(memcmp(to_wild, buffer, sizeof(buffer)) == 0) {
 		return 1;
+	} else {
+		return 0;
 	}
-
- 		
 }
 
 void print_lions_in_some_way(uint8_t lions) {
