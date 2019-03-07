@@ -19,6 +19,7 @@ void initiateIoPins()
 
 int8_t getLionDelta() {
 	// input sequences for in/out.
+	// 0b(S2)(S1) to match the format in the handledning.
 	char to_den[5] = {0b00,0b10,0b11,0b01,0b00};
 	char to_wild[5] = {0b00,0b01,0b11,0b10,0b00};
 	char buffer[5];
@@ -34,6 +35,7 @@ int8_t getLionDelta() {
 	} else if(memcmp(to_wild, buffer, sizeof(buffer)) == 0) {
 		return 1;
 	} else {
+		// Don't change the counter if the input doesn't match any of the sequences.
 		return 0;
 	}
 }
@@ -48,10 +50,11 @@ void main() {
 	uint8_t lionsInWildy = 0x00;
 	print_lions_in_some_way(lionsInWildy);
 	while(1) {
-		//PORTB &= 0x00;
- 		//PORTB |= KOLLA;
 		uint8_t lionDelta = getLionDelta();
 		lionsInWildy += lionDelta;
+		if(lionsInWildy == 255) {
+			lionsInWildy = 0;
+		}
 		print_lions_in_some_way(lionsInWildy);
 	}
 }
